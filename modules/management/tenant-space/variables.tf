@@ -15,19 +15,20 @@ variable "create_default_namespace" {
 }
 
 variable "namespaces" {
-  type        = list(string)
+  type        = map(object({
+    cpu_limit       = optional(string)
+    memory_limit    = optional(string)
+    storage_limit   = optional(string)
+  }))
   description = "Kubernetes namespace names to create within the project. Defaults to [project_name] — a single namespace matching the project. Pass additional names to create more."
-  default     = null
+  default     = {}
   validation {
-    condition = var.namespaces == null || (
-      length(var.namespaces) > 0 &&
-      length(var.namespaces) == length(toset(var.namespaces)) &&
-      alltrue([for ns in var.namespaces :
-        length(ns) <= 63 &&
-        can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", ns))
-      ])
-    )
-    error_message = "At least one namespace is required. All names must be unique, at most 63 characters, and match RFC 1123 DNS label format (lowercase alphanumeric and hyphens, must start and end with alphanumeric)."
+    condition = var.namespaces == null || alltrue([
+      for k, v in var.namespaces :
+      length(k) <= 63 &&
+      can(regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", k))
+    ])
+    error_message = "At least one namespace is required. All names must be at most 63 characters and match RFC 1123 DNS label format (lowercase alphanumeric and hyphens, must start and end with alphanumeric)."
   }
 }
 
