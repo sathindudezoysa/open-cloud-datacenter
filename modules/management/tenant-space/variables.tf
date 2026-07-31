@@ -66,36 +66,6 @@ variable "storage_limit" {
   }
 }
 
-variable "namespace_cpu_limit" {
-  type        = string
-  description = "Per-namespace default CPU limit. Defaults to cpu_limit."
-  default     = null
-  validation {
-    condition     = var.namespace_cpu_limit == null ? true : trimspace(var.namespace_cpu_limit) != ""
-    error_message = "namespace_cpu_limit must be null or a non-empty quantity string."
-  }
-}
-
-variable "namespace_memory_limit" {
-  type        = string
-  description = "Per-namespace default memory limit. Defaults to memory_limit."
-  default     = null
-  validation {
-    condition     = var.namespace_memory_limit == null ? true : trimspace(var.namespace_memory_limit) != ""
-    error_message = "namespace_memory_limit must be null or a non-empty quantity string."
-  }
-}
-
-variable "namespace_storage_limit" {
-  type        = string
-  description = "Per-namespace default storage limit. Defaults to storage_limit."
-  default     = null
-  validation {
-    condition     = var.namespace_storage_limit == null ? true : trimspace(var.namespace_storage_limit) != ""
-    error_message = "namespace_storage_limit must be null or a non-empty quantity string."
-  }
-}
-
 # ── Simple VM / storage network (new approach) ───────────────────────────────
 # Pass a single VLAN ID for each traffic type. The module auto-creates the
 # harvester_network with a deterministic name and the correct cluster NIC.
