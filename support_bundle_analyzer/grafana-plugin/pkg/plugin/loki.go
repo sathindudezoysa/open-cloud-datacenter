@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -83,28 +84,50 @@ func buildLabelQuery(label, value string) (string, error) {
 // (log query, not metric query) and returns raw lines.
 func (c *LokiClient) queryLogRange(ctx context.Context, datasourceUID, query string, from, to time.Time) ([]LogLine, error) {
 	var lines []LogLine
+	seen := make(map[string]struct{})
 	pageStart := from
 	for {
 		page, err := c.queryLogPage(ctx, datasourceUID, query, pageStart, to)
 		if err != nil {
 			return nil, err
 		}
-		lines = append(lines, page...)
+		newEntries := 0
+		for _, line := range page {
+			cursor := logLineCursor(line)
+			if _, ok := seen[cursor]; ok {
+				continue
+			}
+			seen[cursor] = struct{}{}
+			lines = append(lines, line)
+			newEntries++
+		}
 		if len(page) < 5000 {
 			break
 		}
 
 		last := page[len(page)-1].Timestamp
+		if newEntries == 0 {
+			return nil, fmt.Errorf("loki query_range (logs) truncated at %s: unable to advance pagination without a usable entry cursor", last.UTC().Format(time.RFC3339Nano))
+		}
 		if last.Before(pageStart) || !last.Before(to) {
 			return nil, fmt.Errorf("loki query_range (logs) truncated at %s: unable to advance pagination", last.UTC().Format(time.RFC3339Nano))
 		}
-		pageStart = last.Add(time.Nanosecond)
+		pageStart = last
 	}
 
 	sort.SliceStable(lines, func(i, j int) bool {
 		return lines[i].Timestamp.Before(lines[j].Timestamp)
 	})
 	return lines, nil
+}
+
+func logLineCursor(line LogLine) string {
+	labels := make([]string, 0, len(line.Labels))
+	for key, value := range line.Labels {
+		labels = append(labels, key+"="+value)
+	}
+	sort.Strings(labels)
+	return strconv.FormatInt(line.Timestamp.UnixNano(), 10) + "\x00" + strings.Join(labels, "\x00") + "\x00" + line.Line
 }
 
 func (c *LokiClient) queryLogPage(ctx context.Context, datasourceUID, query string, from, to time.Time) ([]LogLine, error) {

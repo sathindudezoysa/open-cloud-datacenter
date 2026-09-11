@@ -23,9 +23,18 @@ export function ConfigPage({ plugin }: Props) {
   const [grafanaToken, setGrafanaToken] = useState('');
   const [tokenConfigured, setTokenConfigured] = useState(Boolean(plugin.meta.secureJsonFields?.grafanaToken));
   const [saving, setSaving] = useState(false);
-  const canSave = tokenConfigured || grafanaToken.trim().length > 0;
+  const validLabelPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  const canSave =
+    lokiUid.trim().length > 0 &&
+    validLabelPattern.test(namespaceLabel) &&
+    (nodeLabel.length === 0 || validLabelPattern.test(nodeLabel)) &&
+    (tokenConfigured || grafanaToken.trim().length > 0);
 
   const onSave = async () => {
+    if (!canSave) {
+      return;
+    }
+
     setSaving(true);
     try {
       await lastValueFrom(

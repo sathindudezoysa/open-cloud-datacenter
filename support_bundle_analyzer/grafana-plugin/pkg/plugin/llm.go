@@ -102,7 +102,7 @@ supports. If the timeline doesn't clearly support a single root cause, say so
 and list the top competing hypotheses instead of forcing one answer.`
 
 func (c *LLMClient) StreamRCAReport(ctx context.Context, rules *Ruleset, timeline Timeline, onDelta func(string)) error {
-	userPrompt := buildUserPrompt(rules, timeline)
+	userPrompt := buildUserPrompt(rules, timeline, c.allowRawLogs)
 
 	body := map[string]interface{}{
 		"model": c.model,
@@ -253,14 +253,18 @@ type openAIStreamChunk struct {
 	} `json:"choices"`
 }
 
-func buildUserPrompt(rules *Ruleset, timeline Timeline) string {
+func buildUserPrompt(rules *Ruleset, timeline Timeline, allowRawLogs bool) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Incident window: %s to %s\n\n", timeline.Window.From.Format(time.RFC3339), timeline.Window.To.Format(time.RFC3339))
 	fmt.Fprintf(&b, "Timeline (%d matched events, chronological):\n", len(timeline.Events))
 	for _, e := range timeline.Events {
+		sample := e.Sample
+		if !allowRawLogs {
+			sample = redactSupportBundleLog(sample)
+		}
 		fmt.Fprintf(&b, "- [%s] pattern=%s category=%s severity=%s count=%d (first=%s last=%s)\n  sample: %s\n",
 			e.Namespace, e.PatternID, e.Category, e.Severity, e.Count,
-			e.FirstSeen.Format(time.RFC3339), e.LastSeen.Format(time.RFC3339), e.Sample)
+			e.FirstSeen.Format(time.RFC3339), e.LastSeen.Format(time.RFC3339), sample)
 	}
 	return b.String()
 }
