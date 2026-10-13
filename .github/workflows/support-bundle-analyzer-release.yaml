@@ -1,12 +1,9 @@
 name: support-bundle-analyzer-release
 
 on:
-  workflow_dispatch:
-    inputs:
-      release_tag:
-        description: 'Release tag (e.g., support-bundle-analyzer/v0.1.1)'
-        required: true
-        type: string
+  push:
+    tags:
+      - 'support-bundle-analyzer/v*'
 
 permissions: {}
 
@@ -32,7 +29,7 @@ jobs:
 
       - name: Validate release inputs
         env:
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
           
@@ -89,6 +86,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ARCHIVE: ${{ runner.temp }}/harv-logs-app.tar.gz
+          PR_AUTHOR: ${{ github.actor }}
           RELEASE_DESCRIPTION: >-
             Harv Logs is a local analysis stack for Harvester support bundles, combining Loki log search with Grafana incident timelines and root-cause analysis.
         run: |
@@ -103,7 +101,7 @@ jobs:
             notes_file="$RUNNER_TEMP/release-notes.md"
             {
               printf '%s\n\n' "$RELEASE_DESCRIPTION"
-              printf '**Contributor:** @%s\n\n' "$PR_AUTHOR"
+              printf '**Triggered by:** @%s\n\n' "$PR_AUTHOR"
               printf '%s\n' "$generated_notes"
             } > "$notes_file"
             
