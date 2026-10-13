@@ -1,11 +1,12 @@
 name: support-bundle-analyzer-release
 
 on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - tools
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g., support-bundle-analyzer/v0.1.1)'
+        required: true
+        type: string
 
 permissions: {}
 
@@ -15,12 +16,11 @@ concurrency:
 
 defaults:
   run:
-    shell: bash 
+    shell: bash
 
 jobs:
   release:
     name: Build and publish release
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'support-bundle-analyzer/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -32,7 +32,7 @@ jobs:
 
       - name: Validate release inputs
         env:
-          RELEASE_TAG: ${{ github.event.pull_request.title }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
           
@@ -89,7 +89,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ARCHIVE: ${{ runner.temp }}/harv-logs-app.tar.gz
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           RELEASE_DESCRIPTION: >-
             Harv Logs is a local analysis stack for Harvester support bundles, combining Loki log search with Grafana incident timelines and root-cause analysis.
         run: |
@@ -108,7 +107,6 @@ jobs:
               printf '%s\n' "$generated_notes"
             } > "$notes_file"
             
-            # This GitHub CLI command will automatically create the Git tag on the merged commit
             gh release create "$RELEASE_TAG" "$ARCHIVE" \
               --title "Support Bundle Analyzer $version" \
               --notes-file "$notes_file" \
