@@ -1,7 +1,7 @@
 name: support-bundle-analyzer-release
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - closed
     branches:
@@ -15,7 +15,7 @@ concurrency:
 
 defaults:
   run:
-    shell: bash
+    shell: bash 
 
 jobs:
   release:
